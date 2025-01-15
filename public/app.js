@@ -35,10 +35,9 @@ function initializeWebSocket() {
   };
 }
 
-// Initialize Local Media Stream
 async function initializeLocalStream() {
   try {
-    // Get local media stream
+    // Get the user's video and audio
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     localVideo.srcObject = localStream;
 
@@ -48,6 +47,7 @@ async function initializeLocalStream() {
     alert("Could not access camera and microphone. Please check permissions.");
   }
 }
+
 
 
 // Handle Signaling Messages
