@@ -19,7 +19,7 @@ const peerConnectionConfig = {
 
 // Initialize WebSocket Connection
 function initializeWebSocket() {
-  socket = new WebSocket("wss://your-vercel-deployment-url/api/signaling");
+  socket = new WebSocket("web-rtc-video-5ne5onvea-ramiths-projects-8937ea4c.vercel.app");
 
   socket.onopen = () => {
     console.log("Connected to signaling server");
