@@ -22,12 +22,19 @@ async function initializeLocalStream() {
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     localVideo.srcObject = localStream;
-    console.log("Local stream initialized");
+
+    // Add local stream to peer connection
+    localStream.getTracks().forEach((track) => {
+      peerConnection.addTrack(track, localStream);
+    });
+
+    console.log("Local stream initialized and added to peer connection.");
   } catch (err) {
     console.error("Error accessing media devices:", err);
     alert("Could not access camera and microphone. Please check permissions.");
   }
 }
+
 
 initializeLocalStream();
 
@@ -111,9 +118,34 @@ async function createOffer() {
   }
 }
 
-function sendOffer(offer) {
-  socket.send(JSON.stringify({ type: "offer", payload: { offer } }));
+async function sendOffer(offer, userId) {
+  try {
+    const response = await fetch('/api/signaling', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'offer',
+        payload: { offer },
+        userId,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to send offer. Status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (data.answer) {
+      console.log("Received answer from signaling server");
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+    } else {
+      throw new Error("No answer received from signaling server.");
+    }
+  } catch (err) {
+    console.error("Error creating offer:", err);
+  }
 }
+
 
 function handleOffer(offer) {
   peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
@@ -138,9 +170,29 @@ function handleAnswer(answer) {
   peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
 }
 
-function sendCandidate(candidate) {
-  socket.send(JSON.stringify({ type: "candidate", payload: { candidate } }));
+async function sendCandidate(candidate, userId) {
+  try {
+    const response = await fetch('/api/signaling', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'candidate',
+        payload: { candidate },
+        userId,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to send ICE candidate. Status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("ICE candidate sent successfully:", data.message);
+  } catch (err) {
+    console.error("Error sending ICE candidate:", err);
+  }
 }
+
 
 function handleCandidate(candidate) {
   peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
@@ -184,8 +236,27 @@ sendMessageButton.onclick = () => {
   }
 };
 
-callButton.onclick = () => {
-  startPeerConnection();
-  console.log("Call started");
-};
+
+function initializePeerConnection() {
+  peerConnection = new RTCPeerConnection();
+
+  // Handle ICE candidates
+  peerConnection.onicecandidate = (event) => {
+    if (event.candidate) {
+      console.log("Sending ICE candidate...");
+      sendCandidate(event.candidate, userId);
+    }
+  };
+
+  // Handle remote streams
+  peerConnection.ontrack = (event) => {
+    if (!remoteStream) {
+      remoteStream = new MediaStream();
+      remoteVideo.srcObject = remoteStream;
+    }
+    remoteStream.addTrack(event.track);
+  };
+
+  console.log("Peer connection initialized.");
+}
 
