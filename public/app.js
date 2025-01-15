@@ -1,5 +1,5 @@
 // Replace the WebSocket connection with socket.io
-const socket = io("https://web-rtc-video-3i4bgj2tk-ramiths-projects-8937ea4c.vercel.app");
+const socket = io("https://web-rtc-video-dw322rym0-ramiths-projects-8937ea4c.vercel.app");
 
 socket.on("connect", () => {
   console.log("Connected to signaling server via socket.io");
