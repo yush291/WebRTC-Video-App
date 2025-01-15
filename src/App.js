@@ -35,6 +35,52 @@ function App() {
     setPeerConnection(pc);
   };
 
+  // Signaling Functions
+  async function sendOffer(offer, userId) {
+    const response = await fetch('/api/signaling', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'offer',
+        payload: { offer },
+        userId,
+      }),
+    });
+
+    const data = await response.json();
+    return data.answer; // Return the answer from backend
+  }
+
+  async function sendAnswer(answer, userId) {
+    const response = await fetch('/api/signaling', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'answer',
+        payload: { answer },
+        userId,
+      }),
+    });
+
+    const data = await response.json();
+    return data.message; // Confirmation
+  }
+
+  async function sendCandidate(candidate, userId) {
+    const response = await fetch('/api/signaling', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'candidate',
+        payload: { candidate },
+        userId,
+      }),
+    });
+
+    const data = await response.json();
+    return data.message; // Confirmation
+  }
+
   return (
     <div>
       <h1>WebRTC Video Chat</h1>
