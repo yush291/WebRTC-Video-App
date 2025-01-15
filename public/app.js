@@ -38,14 +38,17 @@ function initializeWebSocket() {
 // Initialize Local Media Stream
 async function initializeLocalStream() {
   try {
+    // Get local media stream
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     localVideo.srcObject = localStream;
+
     console.log("Local stream initialized.");
   } catch (err) {
     console.error("Error accessing media devices:", err);
     alert("Could not access camera and microphone. Please check permissions.");
   }
 }
+
 
 // Handle Signaling Messages
 function handleSignalingMessage(message) {
@@ -64,21 +67,21 @@ function handleSignalingMessage(message) {
   }
 }
 
-// Start Peer Connection
 function startPeerConnection() {
+  // Initialize peer connection
   peerConnection = new RTCPeerConnection(peerConnectionConfig);
 
   // Add local stream tracks to peer connection
   localStream.getTracks().forEach((track) => peerConnection.addTrack(track, localStream));
 
-  // Handle ICE Candidates
+  // Handle ICE candidates
   peerConnection.onicecandidate = (event) => {
     if (event.candidate) {
       socket.send(JSON.stringify({ type: "candidate", payload: event.candidate }));
     }
   };
 
-  // Handle Remote Stream
+  // Handle remote stream
   peerConnection.ontrack = (event) => {
     remoteStream.addTrack(event.track);
     remoteVideo.srcObject = remoteStream;
@@ -92,6 +95,7 @@ function startPeerConnection() {
 
   createOffer();
 }
+
 
 // Create Offer
 async function createOffer() {
