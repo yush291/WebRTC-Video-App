@@ -1,47 +1,34 @@
-import { WebSocketServer } from "ws";
+const express = require('express');
+const http = require('http');
+const socketIo = require('socket.io');
 
-let wss;
+const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
 
-export default function handler(req, res) {
-  // Only accept WebSocket upgrade requests
-  if (req.method === "GET") {
-    if (req.headers.upgrade && req.headers.upgrade.toLowerCase() === "websocket") {
-      const { socket } = res;
-      wss = new WebSocketServer({ noServer: true });
+app.use(express.static('public'));  // Your static files
 
-      wss.on("connection", (ws) => {
-        console.log("WebSocket connection established");
+io.on('connection', (socket) => {
+  console.log('A user connected');
 
-        // Handle incoming messages
-        ws.on("message", (message) => {
-          console.log("Received message:", message);
-          // Broadcast the message to other connected clients
-          wss.clients.forEach(client => {
-            if (client !== ws && client.readyState === client.OPEN) {
-              client.send(message);
-            }
-          });
-        });
+  // Handle signaling messages
+  socket.on('offer', (offer) => {
+    socket.broadcast.emit('offer', offer);  // Broadcast offer to other users
+  });
 
-        // Handle connection close
-        ws.on("close", () => {
-          console.log("WebSocket connection closed");
-        });
-      });
+  socket.on('answer', (answer) => {
+    socket.broadcast.emit('answer', answer);  // Broadcast answer to other users
+  });
 
-      // Handle WebSocket upgrade request
-      res.socket.on("upgrade", (req, socket, head) => {
-        wss.handleUpgrade(req, socket, head, (ws) => {
-          wss.emit("connection", ws, req);
-        });
-      });
+  socket.on('candidate', (candidate) => {
+    socket.broadcast.emit('candidate', candidate);  // Broadcast ICE candidates
+  });
 
-      // Respond with 101 status code for WebSocket connection
-      res.status(101).end();
-    } else {
-      res.status(426).send("Upgrade Required");
-    }
-  } else {
-    res.status(405).send("Method Not Allowed");
-  }
-}
+  socket.on('disconnect', () => {
+    console.log('User disconnected');
+  });
+});
+
+server.listen(3000, () => {
+  console.log('Server is listening on port 3000');
+});
