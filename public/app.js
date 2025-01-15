@@ -13,6 +13,10 @@ socket.on("disconnect", () => {
   console.log("Disconnected from signaling server");
 });
 
+socket.on("test", () => {
+  console.log("Test passed");
+});
+
 async function initializeLocalStream() {
   try {
     // Get the user's video and audio
@@ -47,14 +51,25 @@ function handleSignalingMessage(message) {
 // Send Chat Message
 sendMessageButton.onclick = () => {
   const message = messageInput.value.trim();
+  
+  if (message === "") {
+    console.error("Message cannot be empty.");
+    return;
+  }
+  
+  // Emit the test event for socket communication
+  socket.emit('test');
+  
+  // Check if the data channel is ready to send a message
   if (dataChannel && dataChannel.readyState === "open") {
     dataChannel.send(message);
     displayMessage("You: " + message);
-    messageInput.value = "";
+    messageInput.value = ""; // Clear the input field after sending
   } else {
     console.error("DataChannel is not open. Cannot send message.");
   }
 };
+
 
 // Mute/Unmute Microphone
 muteButton.onclick = () => {
