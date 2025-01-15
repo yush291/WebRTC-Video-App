@@ -172,4 +172,20 @@ cameraButton.onclick = () => {
   cameraButton.textContent = videoTrack.enabled ? "Turn Off Camera" : "Turn On Camera";
 };
 
-sendMessageButton.onclick = sendMessage;
+sendMessageButton.onclick = () => {
+  const message = messageInput.value.trim();
+  if (message && dataChannel && dataChannel.readyState === "open") {
+    dataChannel.send(message);
+    displayMessage("You: " + message);
+    messageInput.value = "";
+  } else if (!dataChannel || dataChannel.readyState !== "open") {
+    console.error("DataChannel is not open. Cannot send message.");
+    alert("Connection not established. Please start a call first.");
+  }
+};
+
+callButton.onclick = () => {
+  startPeerConnection();
+  console.log("Call started");
+};
+
