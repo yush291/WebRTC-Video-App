@@ -1,42 +1,47 @@
-// api/signaling.js
-let connections = {};
+import { WebSocketServer } from "ws";
+
+let wss;
 
 export default function handler(req, res) {
-  if (req.method === 'POST') {
-    // Handle signaling data (offer, answer, ice candidates)
-    const { type, payload, userId } = req.body;
+  // Only accept WebSocket upgrade requests
+  if (req.method === "GET") {
+    if (req.headers.upgrade && req.headers.upgrade.toLowerCase() === "websocket") {
+      const { socket } = res;
+      wss = new WebSocketServer({ noServer: true });
 
-    if (!connections[userId]) {
-      connections[userId] = { peerConnection: null, dataChannel: null };
-    }
+      wss.on("connection", (ws) => {
+        console.log("WebSocket connection established");
 
-    const userConnection = connections[userId];
-
-    if (type === 'offer') {
-      // Handle offer (create peer connection, set local description, etc.)
-      const { offer } = payload;
-      userConnection.peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
-        .then(() => {
-          return userConnection.peerConnection.createAnswer();
-        })
-        .then((answer) => {
-          userConnection.peerConnection.setLocalDescription(answer);
-          res.status(200).json({ answer });
+        // Handle incoming messages
+        ws.on("message", (message) => {
+          console.log("Received message:", message);
+          // Broadcast the message to other connected clients
+          wss.clients.forEach(client => {
+            if (client !== ws && client.readyState === client.OPEN) {
+              client.send(message);
+            }
+          });
         });
-    } else if (type === 'answer') {
-      // Handle answer (set remote description)
-      const { answer } = payload;
-      userConnection.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-      res.status(200).json({ message: 'Answer set successfully' });
-    } else if (type === 'candidate') {
-      // Handle ICE candidate
-      const { candidate } = payload;
-      userConnection.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-      res.status(200).json({ message: 'ICE candidate added successfully' });
+
+        // Handle connection close
+        ws.on("close", () => {
+          console.log("WebSocket connection closed");
+        });
+      });
+
+      // Handle WebSocket upgrade request
+      res.socket.on("upgrade", (req, socket, head) => {
+        wss.handleUpgrade(req, socket, head, (ws) => {
+          wss.emit("connection", ws, req);
+        });
+      });
+
+      // Respond with 101 status code for WebSocket connection
+      res.status(101).end();
     } else {
-      res.status(400).json({ error: 'Invalid signaling type' });
+      res.status(426).send("Upgrade Required");
     }
   } else {
-    res.status(405).json({ error: 'Method Not Allowed' });
+    res.status(405).send("Method Not Allowed");
   }
 }
